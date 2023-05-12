@@ -1,3 +1,4 @@
+import enum
 import pickle
 import time
 from typing import Tuple
@@ -7,6 +8,34 @@ import numpy as np
 # from reward import ActionReward
 # from direction import Direction
 from constants import *
+
+import string
+from letter_state import LetterState
+
+
+class GameStatus(enum.Enum):
+    GAME_OVER = 0
+    INVALID_WORD = 1
+    INVALID_LENGTH = 2
+    VALID_WORD = 3
+
+class GameData:
+    def __init__(self, word_length: int, num_guesses: int):
+        self._keyboard = dict.fromkeys(string.ascii_lowercase, LetterState.EMPTY)
+        self._guesses = [[dict.fromkeys(string.ascii_lowercase, LetterState.EMPTY)] * word_length] * num_guesses
+        # self._first_guess = [dict.fromkeys(string.ascii_lowercase, LetterState.EMPTY)] * word_length
+        # self._second_guess = [dict.fromkeys(string.ascii_lowercase, LetterState.EMPTY)] * word_length
+        # self._third_guess = [dict.fromkeys(string.ascii_lowercase, LetterState.EMPTY)] * word_length
+        # self._fourth_guess = [dict.fromkeys(string.ascii_lowercase, LetterState.EMPTY)] * word_length
+        # self._fifth_guess = [dict.fromkeys(string.ascii_lowercase, LetterState.EMPTY)] * word_length
+        # self._sixth_guess = [dict.fromkeys(string.ascii_lowercase, LetterState.EMPTY)] * word_length
+
+        self.num_guesses = num_guesses
+
+    def make_guess(self, guess: str) -> GameStatus:
+        pass
+
+    
 
 
 class Game:

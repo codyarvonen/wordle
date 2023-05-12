@@ -1,6 +1,13 @@
 import csv
 import random
 
+def get_word_frequency(csv_file):
+    count = 0
+    initial_word = select_random_word(csv_file)
+    while select_random_word(csv_file) != initial_word:
+        count += 1
+    return count
+
 def select_random_word(csv_file):
     words = []
     probabilities = []
@@ -49,3 +56,6 @@ if __name__ == "__main__":
 
     random_word = select_random_word(csv_file_path)
     print(f'Selected random word: {random_word}')
+
+    word_frequency = get_word_frequency(csv_file_path)
+    print(f'Iterations until duplicate word: {word_frequency}')
