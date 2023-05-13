@@ -1,16 +1,14 @@
 import enum
+import string
 import pickle
-import time
-from typing import Tuple
 import pygame
 import numpy as np
-# from history import GameHistory
-# from reward import ActionReward
-# from direction import Direction
-from constants import *
+from typing import Tuple
 
-import string
+from constants import *
 from letter_state import LetterState
+from word_data import is_valid, select_random_word
+from reward import ActionReward
 
 
 class GameStatus(enum.Enum):
@@ -18,23 +16,53 @@ class GameStatus(enum.Enum):
     INVALID_WORD = 1
     INVALID_LENGTH = 2
     VALID_WORD = 3
+    GAME_WON = 4
+
 
 class GameData:
     def __init__(self, word_length: int, num_guesses: int):
-        self._keyboard = dict.fromkeys(string.ascii_lowercase, LetterState.EMPTY)
-        self._guesses = [[dict.fromkeys(string.ascii_lowercase, LetterState.EMPTY)] * word_length] * num_guesses
-        # self._first_guess = [dict.fromkeys(string.ascii_lowercase, LetterState.EMPTY)] * word_length
-        # self._second_guess = [dict.fromkeys(string.ascii_lowercase, LetterState.EMPTY)] * word_length
-        # self._third_guess = [dict.fromkeys(string.ascii_lowercase, LetterState.EMPTY)] * word_length
-        # self._fourth_guess = [dict.fromkeys(string.ascii_lowercase, LetterState.EMPTY)] * word_length
-        # self._fifth_guess = [dict.fromkeys(string.ascii_lowercase, LetterState.EMPTY)] * word_length
-        # self._sixth_guess = [dict.fromkeys(string.ascii_lowercase, LetterState.EMPTY)] * word_length
-
+        self.word_length = word_length
         self.num_guesses = num_guesses
+        self.wordle_word = select_random_word(WORD_DATA_FILE)
+        self.keyboard = dict.fromkeys(string.ascii_lowercase, LetterState.EMPTY)
+        self.guesses = [[dict.fromkeys(string.ascii_lowercase, LetterState.EMPTY) for _ in range(word_length)] for _ in range(num_guesses)]
 
-    def make_guess(self, guess: str) -> GameStatus:
-        pass
+    def make_guess(self, guess: str) -> GameStatus:            
+        if len(guess) != self.word_length:
+            return GameStatus.INVALID_LENGTH
+        if not is_valid(WORD_DATA_FILE, guess):
+            return GameStatus.INVALID_WORD
+        
+        # TODO: Make it so that you can input the wordle word
+        
+        # TODO: Fix Yellow letter bug
+        
+        # TODO: Make sure that the keyboard is accurate
 
+        # TODO: Write test functions to verify edge cases
+
+        # TODO: Fix the UI
+                        
+        # Update the game data
+        for i in range(self.word_length):
+            if guess[i] == self.wordle_word[i]:
+                state = LetterState.GREEN
+            elif guess[i] in self.wordle_word and guess[:i].count(guess[i]) <= self.wordle_word.count(guess[i]):
+                state = LetterState.YELLOW
+            else:
+                state = LetterState.GREY
+            self.guesses[-self.num_guesses][i][guess[i]] = state
+            self.keyboard[guess[i]] = state
+
+        self.num_guesses -= 1
+
+        if guess == self.wordle_word:
+            return GameStatus.GAME_WON
+        elif self.num_guesses > 0:
+            return GameStatus.VALID_WORD
+        else:
+            return GameStatus.GAME_OVER
+        
     
 
 
@@ -43,53 +71,99 @@ class Game:
     def __init__(
         self,
         num_guesses: int = NUM_GUESSES,
+        word_length: int = WORD_LENGTH,
         seed: int = None,
-        # initial_board: np.ndarray = None,
-        # iterative_mode: bool = False,
-        # visualize: bool = True,
-        # save_game: bool = False,
-        # command_list: list[Direction] = None,
+        visualize: bool = True,
+        save_game: bool = False
     ):
         self.num_guesses = num_guesses
+        self.word_length = word_length
         self.seed = seed
-        # self.initial_board = initial_board
-        # self.tile_size = BOARD_SIZE[0] / board_size
-        # self.visualize = visualize
-        # self.save_game = save_game
-        # self.command_list = command_list
-        # self.total_score = 0
+        self.visualize = visualize
+        self.save_game = save_game
+        self.tile_size = (WINDOW_SIZE[0] / self.word_length) - TILE_SPACING
+        self.key_size = (WINDOW_SIZE[1] - ((self.tile_size + TILE_SPACING) * num_guesses)) / 3
+        
+        self.history = []
+
+        self.game_data = GameData(word_length, num_guesses)
 
         if self.seed is not None:
             np.random.seed(seed)
 
     
     # Redraw the board
-    def update_screen(self, board: np.ndarray):
-        # self.window.fill(BACKGROUND_COLOR)
-        # pygame.draw.rect(
-        #     self.window, TILE_COLORS[0], pygame.Rect(*BOARD_POS, *BOARD_SIZE)
-        # )
-        # for i in range(self.board_size):
-        #     for j in range(self.board_size):
-        #         x, y = (
-        #             BOARD_POS[0] + j * self.tile_size,
-        #             BOARD_POS[1] + i * self.tile_size,
-        #         )
-        #         value = board[i, j]
-        #         color = TILE_COLORS[value]
-        #         pygame.draw.rect(
-        #             self.window,
-        #             color,
-        #             pygame.Rect(x, y, self.tile_size, self.tile_size),
-        #         )
-        #         if value > 0:
-        #             text = self.font.render(str(value), True, TILE_FONT_COLOR)
-        #             text_rect = text.get_rect(
-        #                 center=(x + self.tile_size / 2, y + self.tile_size / 2)
-        #             )
-        #             self.window.blit(text, text_rect)
-        # # Update the display
-        # pygame.display.update()
+    def update_screen(self):
+        self.window.fill(BACKGROUND_COLOR)
+        self.font = pygame.font.SysFont("Arial", TILE_FONT_SIZE, bold=True)
+        # Update the guesses
+        for i in range(self.num_guesses):
+            for j in range(self.word_length):
+                x, y = (
+                    BORDER_WIDTH + j * self.tile_size,
+                    BORDER_WIDTH + i * self.tile_size,
+                )
+                tile = [(key, value) for key, value in self.game_data.guesses[i][j].items() if value != LetterState.EMPTY]
+                if len(tile) == 0:
+                    color_state = LetterState.EMPTY
+                elif len(tile) == 1:
+                    color_state = tile[0][1]
+                else:
+                    raise Exception("Invalid tile state")
+                color = TILE_COLORS[color_state]
+
+                # Draw Border
+                pygame.draw.rect(
+                    self.window,
+                    BORDER_COLOR,
+                    pygame.Rect(x, y, self.tile_size, self.tile_size),
+                )
+                # Draw Tile
+                pygame.draw.rect(
+                    self.window,
+                    color,
+                    pygame.Rect(x + BORDER_WIDTH, y + BORDER_WIDTH, self.tile_size - BORDER_WIDTH, self.tile_size - BORDER_WIDTH),
+                )
+                # Draw Letter
+                if color_state != LetterState.EMPTY:
+                    letter = self.font.render(str(tile[0][0]), True, TILE_FONT_COLOR)
+                    text_rect = letter.get_rect(
+                        center=(x + self.tile_size / 2, y + self.tile_size / 2)
+                    )
+                    self.window.blit(letter, text_rect)
+        
+        x, y = (
+            0,
+            (BORDER_WIDTH + self.tile_size) * self.num_guesses
+        )
+        # Update the keyboard
+        count = 0
+        self.font = pygame.font.SysFont("Arial", KEY_FONT_SIZE, bold=True)
+        for key in self.game_data.keyboard:
+            # Draw Tile
+            if count % 9 == 8:
+                y += self.key_size
+                x = 0
+            pygame.draw.rect(
+                self.window,
+                TILE_COLORS[self.game_data.keyboard[key]],
+                pygame.Rect(x, y, self.key_size, self.key_size),
+            )
+            # Draw Letter
+            if self.game_data.keyboard[key] is LetterState.EMPTY:
+                text_color = KEY_FONT_COLOR_BLACK
+            else:
+                text_color = TILE_FONT_COLOR
+            letter = self.font.render(str(key), True, text_color)
+            text_rect = letter.get_rect(
+                center=(x + self.key_size / 2, y + self.key_size / 2)
+            )
+            self.window.blit(letter, text_rect)
+            x += self.key_size
+            count += 1
+                
+        # Update the display
+        pygame.display.update()
 
     def init_screen(self):
         # Initialize Pygame
@@ -101,88 +175,74 @@ class Game:
         self.font = pygame.font.SysFont("Arial", TILE_FONT_SIZE, bold=True)
 
     def store_history(self, directory: str):
-        with open(f"{directory}/game-{self.seed}.pkl", "wb") as f:
+        with open(f"{directory}/game-{self.game_data.wordle_word}.pkl", "wb") as f:
             pickle.dump(self.history, f)
 
-    def step(
-        self, board: np.ndarray, command: Direction
-    ) -> Tuple[np.ndarray, ActionReward, bool]:
-        game_over = False
-        prev_board = board.copy()
-        current_board = board.copy()
-        collapsed_board, score = self.move_tiles(current_board, command)
+    def step(self, guess: str) -> Tuple[ActionReward, GameStatus]:
+        # TODO: Convert one hot encoded vector to str???
+        status = self.game_data.make_guess(guess)
+        if status is not GameStatus.INVALID_LENGTH and status is not GameStatus.INVALID_WORD:
+            self.history.append(guess)
+            valid = True
+        else: 
+            valid = False
+        reward = ActionReward(self.history, self.game_data.wordle_word, self.num_guesses, valid)
 
-        if self.save_game:
-            self.history.add_action(command)
-
-        # Check if the game is over
-        if self.is_game_over(collapsed_board):
-            game_over = True
-            new_board = collapsed_board
-        elif np.array_equal(prev_board, collapsed_board):
-            new_board = collapsed_board
-        else:
-            new_board = self.add_tile(collapsed_board)
-
-        reward = ActionReward(score, prev_board, new_board)
-
-        return new_board, reward, game_over
+        return reward, status
 
     def run(self):
-        # Initialize the game board
-        if self.initial_board is None:
-            board = self.init_board()
-        else:
-            board = self.initial_board
-
-        prev_board = board.copy()
-
+        
         if self.visualize:
             self.init_screen()
 
-            self.update_screen(board)
+            self.update_screen()
 
-            if self.command_list is not None:
-                pygame.event.get()
+            # if self.command_list is not None:
+            #     pygame.event.get()
 
         quit_game = False
-        board_complete = False
-        game_over = quit_game or board_complete
-
+        game_complete = False
+        game_over = quit_game or game_complete
+        make_step = False
         # Start the game loop
+        current_word = ""
         while not game_over:
-            if self.command_list is not None:
-                # Take a step through command list
-                command = self.command_list.pop(0)
-                quit_game = len(self.command_list) == 0
-                if self.visualize:
-                    time.sleep(0.75)
-            else:
-                # Handle events
+            # if self.command_list is not None:
+            #     # Take a step through command list
+            #     # command = self.command_list.pop(0)
+            #     # quit_game = len(self.command_list) == 0
+            #     # if self.visualize:
+            #     #     time.sleep(0.75)
+            #     pass
+            # else:
+            # Handle events
+            event = pygame.event.wait()
+            while event.type not in [pygame.KEYDOWN, pygame.QUIT]:
                 event = pygame.event.wait()
-                while event.type not in [pygame.KEYDOWN, pygame.QUIT]:
-                    event = pygame.event.wait()
-                if event.type == pygame.QUIT:
-                    quit_game = True
-                elif event.type == pygame.KEYDOWN:
-                    if event.key == pygame.K_UP:
-                        command = Direction.UP
-                    elif event.key == pygame.K_DOWN:
-                        command = Direction.DOWN
-                    elif event.key == pygame.K_LEFT:
-                        command = Direction.LEFT
-                    elif event.key == pygame.K_RIGHT:
-                        command = Direction.RIGHT
+            if event.type == pygame.QUIT:
+                quit_game = True
+            elif event.type == pygame.KEYDOWN:
+                if event.key == pygame.K_BACKSPACE:
+                    current_word = current_word[:-1]
+                elif event.key == pygame.K_RETURN and len(current_word) == self.word_length:
+                    # self.step(current_word)
+                    # self.update_screen()
+                    make_step = True
+                elif len(current_word) < self.word_length:
+                    current_word += chr(event.key)
+                print(current_word)
+                        
+            if make_step:
+                _, status = self.step(current_word)
+                game_complete = status is GameStatus.GAME_OVER or status is GameStatus.GAME_WON
+                current_word = ""
+            
+            game_over = quit_game or game_complete
 
-            if self.save_game:
-                self.history.add_action(command)
+            if self.visualize and make_step:
+                self.update_screen()
 
-            board, reward, board_complete = self.step(board, command)
-            self.total_score += reward.action_score
-            game_over = quit_game or board_complete
-
-            if self.visualize and not np.array_equal(prev_board, board):
-                self.update_screen(board)
+            make_step = False
 
             if game_over and self.visualize:
                 game_over_text = self.font.render(
@@ -201,14 +261,11 @@ class Game:
 
                 break
 
-            prev_board = board.copy()
-
         if self.visualize:
             # Quit Pygame
             pygame.quit()
 
         if self.save_game:
-            self.history.final_board = board
             self.store_history("saved_games")
 
 

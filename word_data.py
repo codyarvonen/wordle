@@ -1,6 +1,17 @@
 import csv
 import random
 
+def is_valid(csv_file: str, word: str) -> bool:
+    with open(csv_file, 'r') as file:
+        reader = csv.reader(file)
+        next(reader)  # Skip the header row if it exists
+
+        for row in reader:
+            if row[0] == word:
+                return True
+    return False
+            
+
 def get_word_frequency(csv_file):
     count = 0
     initial_word = select_random_word(csv_file)
@@ -8,7 +19,7 @@ def get_word_frequency(csv_file):
         count += 1
     return count
 
-def select_random_word(csv_file):
+def select_random_word(csv_file: str) -> str:
     words = []
     probabilities = []
 
