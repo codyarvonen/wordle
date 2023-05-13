@@ -25,4 +25,4 @@ TILE_COLORS = {
 }
 
 
-WORD_DATA_FILE = 'words.csv'
+WORD_DATA_FILE = "words.csv"
