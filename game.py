@@ -3,7 +3,6 @@ import time
 import string
 import pickle
 import pygame
-import numpy as np
 from typing import Tuple
 
 from constants import *
@@ -45,8 +44,7 @@ class GameData:
             return GameStatus.INVALID_WORD
 
         # TODO: Write test functions to verify edge cases
-
-        # TODO: Fix the UI
+        # TODO: Fix yellow tile bug
 
         # Update the game data
         for i in range(self.word_length):
@@ -104,6 +102,12 @@ class Game:
 
         self.history = []
 
+        if wordle_word is not None:
+            assert (
+                len(wordle_word) == word_length
+            ), "target word must have length of word_length"
+            assert is_valid(WORD_DATA_FILE, wordle_word), "target word must be valid"
+
         self.game_data = GameData(word_length, num_guesses, wordle_word)
 
     # Display the typed word
@@ -118,7 +122,6 @@ class Game:
 
             if j < len(typed_word):
                 # Draw Letter
-                # print(typed_word[j])
                 letter = self.font.render(
                     str(typed_word[j]), True, KEY_FONT_COLOR_BLACK
                 )
@@ -257,9 +260,6 @@ class Game:
 
             self.update_screen()
 
-            # if self.command_list is not None:
-            #     pygame.event.get()
-
         quit_game = False
         game_complete = False
         game_over = quit_game or game_complete
@@ -267,15 +267,6 @@ class Game:
         # Start the game loop
         current_word = ""
         while not game_over:
-            # if self.command_list is not None:
-            #     # Take a step through command list
-            #     # command = self.command_list.pop(0)
-            #     # quit_game = len(self.command_list) == 0
-            #     # if self.visualize:
-            #     #     time.sleep(0.75)
-            #     pass
-            # else:
-            # Handle events
             event = pygame.event.wait()
             while event.type not in [pygame.KEYDOWN, pygame.QUIT]:
                 event = pygame.event.wait()
@@ -289,13 +280,10 @@ class Game:
                     event.key == pygame.K_RETURN
                     and len(current_word) == self.word_length
                 ):
-                    # self.step(current_word)
-                    # self.update_screen()
                     make_step = True
                 elif len(current_word) < self.word_length:
                     current_word += chr(event.key)
                     self.update_type(current_word)
-                # print(current_word)
 
             game_won = False
             if make_step:
@@ -315,18 +303,22 @@ class Game:
 
             if game_over and self.visualize:
                 if game_won:
-                    pass
+                    game_over_text = self.font.render(
+                        "You Won!", True, GAME_OVER_FONT_COLOR
+                    )
+                    game_over_color = GAME_WON_COLOR
                 else:
                     game_over_text = self.font.render(
-                        "Game Over!", True, GAME_OVER_FONT_COLOR
+                        self.game_data.wordle_word, True, GAME_OVER_FONT_COLOR
                     )
-                    game_over_rect = game_over_text.get_rect(
-                        center=(WINDOW_SIZE[0] / 2, WINDOW_SIZE[1] / 2)
-                    )
-                    pygame.draw.rect(
-                        self.window, GAME_OVER_COLOR, game_over_rect.inflate(20, 20)
-                    )
-                    self.window.blit(game_over_text, game_over_rect)
+                    game_over_color = GAME_OVER_COLOR
+                game_over_rect = game_over_text.get_rect(
+                    center=(WINDOW_SIZE[0] / 2, WINDOW_SIZE[1] / 2)
+                )
+                pygame.draw.rect(
+                    self.window, game_over_color, game_over_rect.inflate(20, 20)
+                )
+                self.window.blit(game_over_text, game_over_rect)
 
                 # Update the display
                 pygame.display.update()
@@ -343,4 +335,4 @@ class Game:
 
 
 if __name__ == "__main__":
-    Game(wordle_word="hello").run()
+    Game(wordle_word="sassy").run()
