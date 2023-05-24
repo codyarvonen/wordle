@@ -46,29 +46,52 @@ class GameData:
         # TODO: Write test functions to verify edge cases
         # TODO: Fix yellow tile bug
 
-        # Update the game data
-        for i in range(self.word_length):
-            if guess[i] == self.wordle_word[i]:
-                state = LetterState.GREEN
-            elif guess[i] in self.wordle_word and guess[:i].count(
-                guess[i]
-            ) < self.wordle_word.count(guess[i]):
-                state = LetterState.YELLOW
-            else:
-                state = LetterState.GREY
-            self.guesses[-self.num_guesses][i][guess[i]] = state
+        # guess:  hello
+        # wordle: world
 
-            if self.keyboard[guess[i]] not in (
-                LetterState.GREEN,
-                LetterState.GREY,
-            ) and (
-                self.keyboard[guess[i]] == LetterState.EMPTY
-                or (
-                    self.keyboard[guess[i]] == LetterState.YELLOW
-                    and state == LetterState.GREEN
-                )
-            ):
+        word_dict = {}
+        unmatched_guess = []
+
+        # Build a dictionary of letter counts for the actual word
+        for i, letter in enumerate(self.wordle_word):
+            word_dict[letter] = word_dict.get(letter, 0) + 1
+
+        # Iterate over the guess and determine the color of each letter
+        for i, letter in enumerate(guess):
+            if letter == self.wordle_word[i]:
+                # Correct letter in the correct position
+                state = LetterState.GREEN
+                word_dict[letter] -= 1
+                self.guesses[-self.num_guesses][i][guess[i]] = state
                 self.keyboard[guess[i]] = state
+                unmatched_guess.append("_")
+            else:
+                unmatched_guess.append(letter)
+
+        # Iterate over the unmatched letters in the guess
+        for i, letter in enumerate(guess):
+            if letter == unmatched_guess[i]:
+                if word_dict.get(letter, 0) > 0:
+                    # Correct letter in the wrong position
+                    state = LetterState.YELLOW
+                    word_dict[letter] -= 1
+                else:
+                    # Incorrect letter
+                    state = LetterState.GREY
+
+                self.guesses[-self.num_guesses][i][guess[i]] = state
+
+                if self.keyboard[guess[i]] not in (
+                    LetterState.GREEN,
+                    LetterState.GREY,
+                ) and (
+                    self.keyboard[guess[i]] == LetterState.EMPTY
+                    or (
+                        self.keyboard[guess[i]] == LetterState.YELLOW
+                        and state == LetterState.GREEN
+                    )
+                ):
+                    self.keyboard[guess[i]] = state
 
         self.num_guesses -= 1
 
