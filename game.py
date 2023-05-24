@@ -358,4 +358,5 @@ class Game:
 
 
 if __name__ == "__main__":
-    Game(wordle_word="sassy").run()
+    # Game(wordle_word="crepe").run()
+    Game().run()
