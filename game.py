@@ -3,6 +3,7 @@ import time
 import string
 import pickle
 import pygame
+import numpy as np
 from typing import Tuple
 
 from constants import *
@@ -36,6 +37,42 @@ class GameData:
             ]
             for _ in range(num_guesses)
         ]
+
+    def get_game_state(self) -> np.ndarray:
+        encoded_guesses = np.array(
+            [
+                [
+                    [
+                        [1 if letter_state == state else 0 for state in LetterState]
+                        for letter_state in letter_dict.values()
+                    ]
+                    for letter_dict in guess
+                ]
+                for guess in self.guesses
+            ]
+        )
+        encoded_keyboard = np.array(
+            [
+                [1 if letter_state == state else 0 for state in LetterState]
+                for letter_state in self.keyboard.values()
+            ]
+        )
+        # return np.concatenate(
+        #     [
+        #         encoded_keyboard[np.newaxis, :],
+        #         encoded_guesses.reshape(
+        #             -1, len(string.ascii_lowercase), len(LetterState)
+        #         ),
+        #     ],
+        #     axis=0,
+        # )
+        return np.concatenate(
+            [
+                encoded_keyboard.flatten(),
+                encoded_guesses.flatten(),
+            ],
+            axis=0,
+        )
 
     def make_guess(self, guess: str) -> GameStatus:
         if len(guess) != self.word_length:
@@ -94,6 +131,11 @@ class GameData:
                     self.keyboard[guess[i]] = state
 
         self.num_guesses -= 1
+
+        # np.set_printoptions(threshold=np.inf)
+        # test_state = self.get_game_state()
+        # print(test_state.shape)
+        # print(test_state)
 
         if guess == self.wordle_word:
             return GameStatus.GAME_WON

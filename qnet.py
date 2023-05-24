@@ -19,8 +19,6 @@
 #
 
 
-
-
 import math
 import numpy as np
 import torch
@@ -30,21 +28,44 @@ import torch.nn.functional as F
 
 class DQN(nn.Module):
     def __init__(
-        self
+        self,
+        device="cpu",
+        num_letters=26,
+        num_state=4,
+        num_guesses=6,
+        word_length=5,
+        layer1_size=4096,
+        layer2_size=4096,
+        layer3_size=4096,
     ):
         super(DQN, self).__init__()
 
-    def encode_state(self, batch: np.ndarray):
-        pass
+        self.device = device
 
-    def forward(self, board: np.ndarray):
-        pass
+        self.layer1 = nn.Linear(
+            num_letters * num_state * ((num_guesses * word_length) + 1), layer1_size
+        )
+        self.batch_norm1 = nn.BatchNorm1d(layer1_size)
+        self.layer2 = nn.Linear(layer1_size, layer2_size)
+        self.batch_norm2 = nn.BatchNorm1d(layer2_size)
+        self.layer3 = nn.Linear(layer2_size, layer3_size)
+        self.batch_norm3 = nn.BatchNorm1d(layer3_size)
+        self.output_layer = nn.Linear(layer3_size, num_letters * word_length)
+
+    def forward(self, state: np.ndarray):
+        if len(state.shape) == 1:
+            state = np.expand_dims(state, 0)
+        # state = self.encode_state(board)
+        state_tensor = torch.from_numpy(state).float()
+        layer1_output = F.relu(self.batch_norm1(self.layer1(state_tensor)))
+        layer2_output = F.relu(self.batch_norm2(self.layer2(layer1_output)))
+        layer3_output = F.relu(self.batch_norm3(self.layer3(layer2_output)))
+        action_output = F.relu(self.output_layer(layer3_output))
+        return action_output
 
 
 class DQRNN(nn.Module):
-    def __init__(
-        self
-    ):
+    def __init__(self):
         super(DQRNN, self).__init__()
 
     def encode_state(self, batch: np.ndarray):
