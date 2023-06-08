@@ -34,9 +34,9 @@ class DQN(nn.Module):
         num_state=4,
         num_guesses=6,
         word_length=5,
-        layer1_size=4096,
-        layer2_size=4096,
-        layer3_size=4096,
+        layer1_size=2048,
+        layer2_size=1024,
+        layer3_size=512,
     ):
         super(DQN, self).__init__()
 
